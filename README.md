@@ -1,21 +1,16 @@
-# Homework 2: Memory Allocator #
+# Memory Allocator #
 
-### This is an individual assignment
-### Points: 10% of your final grade
-### **Due: 20 October 2017, 11:59 PM**
 
-<br />
-<br />
 
 ## 1 Introduction
 
 Memory management is a fundamental issue in operating systems; one needs to consider the issue of memory fragmentation and the efficiency of dynamic allocation and deallocation in programs. 
 Additionally, general-purpose memory allocators can become bottlenecks in high-performance applications, so custom memory managers can be written to fit a particular application's memory usage.
 
-For this assignment, you will implement a dynamic memory allocator using the buddy memory technique.
+The aim is to implement a dynamic memory allocator using the buddy memory technique.
 This will provide insight into how heap memory management for an application is performed and the reasoning behind allocator design.
 
-Section 2 gives background on memory and Section 3 outlines the buddy memory allocator algorithm, which you will implement in Section 4.
+Section 2 gives background on memory and Section 3 outlines the buddy memory allocator algorithm.
 
 <br />
 <br />
@@ -23,7 +18,7 @@ Section 2 gives background on memory and Section 3 outlines the buddy memory all
 ## 2 Background
 
 Every process has its own virtual address space. Parts of this space are mapped to physical memory locations through address translation, which is managed by the memory management unit and the kernel. 
-You have seen first-hand in homework 0 that the address space is divided into several parts, primarily the stack, heap, and segments for code and static data.
+The address space is divided into several parts, primarily the stack, heap, and segments for code and static data.
 
 <p align="center"><img src="./images/memory.png" alt="Memory Layout" align="middle"></p>
 
@@ -41,7 +36,7 @@ The heap is a continuous region of the application's address space that is dynam
 The virutal address space is mapped to physical space by means of pages. When ```sbrk()``` is called to increase the heap limit, the new space is mapped to physical memory in quanta of pages. 
 These pages, however, are of a fixed size (usually 4KB), meaning the heap break won't always be placed at a page boundary. 
 A space can therefore arise between the break and the next page boundary: "no man's land".
-While accessing addresses beyond the break should trigger memory access violation errors ("bus error" or "segmentaition fault"), no errors are raised for memory accesses that are in "no man's land", outside of the mapped heap region but within an allocated page. Be aware that this can cause bugs to occur that are very difficult to track.
+While accessing addresses beyond the break should trigger memory access violation errors ("bus error" or "segmentaition fault"), no errors are raised for memory accesses that are in "no man's land", outside of the mapped heap region but within an allocated page. We have to be warey that this can cause bugs to occur that are very difficult to track.
 
 <p align="center"><img src="./images/nomansland.png" alt="No Man's Land" align="middle"></p>
 
@@ -53,7 +48,6 @@ It has the following prototype:
 
 The function manipulates the position of the break, specifically by incrementing its position by a specified number of **bytes**. 
 It returns the address of the **previous** break; so you can use ```sbrk(0)``` to get the current position of the break.
-Read the man page for more information.
 
 <br />
 <br />
@@ -125,98 +119,6 @@ Consider the state of the heap from the previous example.
 <br />
 <br />
 
-## 4 Assignment
-
-Implement the buddy memory allocation algorithm for your custom allocator.  
-Skeleton code is provided with a structure for a simple linked list of blocks.  
-You are implementing custom versions of malloc, free, and realloc so you cannot use those functions in this assignment.
-
-Pay attention to the notes given in the tasks, they give hints on how to implement the functions and specify several requirements.
-
-### 4.1 Setup
-
-Download the provided skeleton code:  
-```
-git pull https://github.com/WITS-COMS2001/hw-2017.git
-cd hw2
-```
-
-A very simple program is provided in main.c to test your allocator. It will produce various errors until you implement the functions in allocator.c. You can run it as follows:  
-```
-make
-./main
-```
-You are encouraged to add tests to main.c as you go along to ensure your functions work correctly.
-
-<br />
-
-### 4.2 Allocation
-
-Implement memory allocation in allocator.c as described in Section 3.1.
-
-```
-void* custom_malloc(size_t size)
-```
-The function takes in the requested memory size in number of bytes (where size_t represents an unsigned integer type) and returns a pointer to a valid memory location with at least that many bytes available.  
-
-- **Implement the custom_malloc() function using the buddy allocation algorithm**
-
-**NOTE:**
-- Add the ```sizeof``` the block struct to the requested size; you need to fit the block metadata into the same space.  
-- On the first custom_malloc request, extend the heap with ```sbrk()``` and create a block of maximum size. Then follow the normal sequence of allocating a block.  
-- Use a best-fit search when allocating blocks: Search for the smallest block greater or equal to the required size, and split the block as usual if greater.
-- Remember to round up the size to the next power of 2.
-- The maximum block size, MAX_SIZE, is defined in allocator.h to be 1 MiB. You may assume that the program will never request more than 1MiB of space in total.
-- When initialising a block, initialise the 'merge_buddy' array elements to NULL.
-- When splitting a block, set the 'buddy' pointers of both blocks and add the buddy of the block being split to the 'merge_buddy' arrays of the split blocks. This is for the merging process.
-- Return NULL if the requested size is zero or cannot be allocated.
-- Beware of pointer arithmetic behaviour!
-
-<br />
-
-### 4.3 Deallocation
-
-Implement memory deallocation in allocator.c as described in Section 3.2.
-
-```
-void custom_free( void* ptr )
-```  
-The function takes in a pointer to a memory block's data previously allocated using custom_malloc() and frees it, making it available for allocation again.
-To reduce fragmentation and use memory efficiently, blocks should be merged when freed.  
-
-- **Implement the custom_free() function**
-
-**NOTE:**
-- Only valid pointers to data in blocks should be freed. If ptr is NULL, do nothing.
-- When a block is freed, check its buddy. If the buddy is also free, merge the blocks together.  
-- If the buddy is not the same size as the current block, obviously it cannot be merged since it is split.
-- Use the 'merge_buddy' array to hold the buddies of the merged blocks as they are split. Keep the array updated as blocks are split and merged.
-- Check on the larger merged blocks from the 'merge_buddy' array until the buddy is not free, or the block is at the maximum size.  
-
-<br />
-
-### 4.4 Reallocation
-
-A common use case for heap memory is a dynamic array that needs to expand past its initial memory allocation as more elements are added. In such cases, we want to reallocate the given region of memory to a larger size without losing the data. In memory-efficient programs, we may also want to reallocate to a smaller size, if most of the elements in a large dynamic array are removed for example.
-
-```
-void* custom_realloc(void* ptr, size_t size)
-```
-The function takes in a pointer to data previously allocated using custom_malloc() and returns a pointer to the data in a block of at least the specified size. 
-
-- **Implement the custom_realloc() function**
-
-**NOTE:**
-- The contents of the old block must be copied into the new block. Hint: use ```memcpy()```.
-- The previous memory location should be deallocated if a new block is chosen.
-- You should use the current block if it fits the required size. 
-- If the required size is less than the size of the current block, split the block until at the minimum sufficient size.
-- custom_realloc() on a NULL ptr should behave the same as custom_malloc().
-
-<br />
-<br />
-
-## 5 Submission
 
 This assignment is due **20 October 2017, 11:59 PM**. Ensure your final code is in your private repository by then.
 
